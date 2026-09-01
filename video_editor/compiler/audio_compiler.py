@@ -3,6 +3,7 @@
 from typing import List, Optional
 from video_editor.compiler.filter_graph import FilterGraph, LabelAllocator
 from video_editor.compiler.models import RenderGap, RenderPlan, RenderSegment
+from video_editor.compiler.speed import compile_audio_speed_filters
 from video_editor.ir.enums import TrackType
 
 
@@ -50,10 +51,26 @@ class AudioCompiler:
                         outputs=[pts_label],
                     )
 
+                    last_audio_label = pts_label
+
+                    # Speed Factor (chained atempo filters)
+                    if item.speed != 1.0:
+                        atempo_filters = compile_audio_speed_filters(item.speed)
+                        for atempo_str in atempo_filters:
+                            atempo_params = atempo_str.split("=", 1)[1]
+                            spd_label = allocator.allocate_audio("a_spd")
+                            graph.add_node(
+                                inputs=[last_audio_label],
+                                filter_name="atempo",
+                                params=[atempo_params],
+                                outputs=[spd_label],
+                            )
+                            last_audio_label = spd_label
+
                     # 3. Format Normalization
                     fmt_label = allocator.allocate_audio("a_fmt")
                     graph.add_node(
-                        inputs=[pts_label],
+                        inputs=[last_audio_label],
                         filter_name="aformat",
                         params=[f"sample_rates={sample_rate}", "channel_layouts=stereo"],
                         outputs=[fmt_label],

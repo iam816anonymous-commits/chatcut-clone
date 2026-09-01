@@ -23,3 +23,12 @@ def validate_project_renderability(project: VideoProject) -> None:
             f"Project '{project.id}' contains zero active tracks with renderable clips",
             {"project_id": project.id},
         )
+
+    # Validate speed multipliers on all clips
+    for track in project.tracks:
+        for clip in track.clips:
+            if hasattr(clip, "speed") and clip.speed <= 0.0:
+                raise UnrenderableProjectError(
+                    f"Clip '{clip.id}' has invalid speed multiplier {clip.speed}",
+                    {"clip_id": clip.id, "speed": clip.speed},
+                )

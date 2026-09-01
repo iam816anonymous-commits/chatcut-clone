@@ -1,8 +1,10 @@
 """Multi-Track Video Compositor for Z-Ordered Visual Overlay Chains."""
 
 from typing import List
+from video_editor.compiler.effects import compile_effect_filter
 from video_editor.compiler.filter_graph import FilterGraph, LabelAllocator
 from video_editor.compiler.models import RenderGap, RenderPlan, RenderSegment, RenderTrack
+from video_editor.compiler.speed import compile_video_speed_filter
 from video_editor.ir.enums import TrackType
 
 
@@ -63,14 +65,33 @@ class VideoCompositor:
                         outputs=[t_label],
                     )
 
-                    # PTS Reset
+                    # PTS Reset & Speed Factor
                     pts_label = allocator.allocate_video("v_pts")
+                    speed_filter_spec = compile_video_speed_filter(item.speed)
+                    pts_param = f"PTS-STARTPTS+{speed_filter_spec.split('=', 1)[1]}" if "setpts=" in speed_filter_spec else "PTS-STARTPTS"
                     graph.add_node(
                         inputs=[t_label],
                         filter_name="setpts",
-                        params=["PTS-STARTPTS"],
+                        params=[pts_param],
                         outputs=[pts_label],
                     )
+
+                    last_effect_label = pts_label
+
+                    # Visual Effect Chain Processing
+                    if item.effects:
+                        for eff in item.effects:
+                            eff_filter = compile_effect_filter(eff)
+                            eff_name = eff_filter.split("=", 1)[0]
+                            eff_params = eff_filter.split("=", 1)[1] if "=" in eff_filter else ""
+                            eff_label = allocator.allocate_video("v_eff")
+                            graph.add_node(
+                                inputs=[last_effect_label],
+                                filter_name=eff_name,
+                                params=[eff_params] if eff_params else [],
+                                outputs=[eff_label],
+                            )
+                            last_effect_label = eff_label
 
                     # Scale to canvas size or transform scale
                     scale_w = int(canvas_width * item.transform.scale_x)
@@ -82,7 +103,7 @@ class VideoCompositor:
 
                     sc_label = allocator.allocate_video("v_sc")
                     graph.add_node(
-                        inputs=[pts_label],
+                        inputs=[last_effect_label],
                         filter_name="scale",
                         params=[f"{scale_w}:{scale_h}"],
                         outputs=[sc_label],

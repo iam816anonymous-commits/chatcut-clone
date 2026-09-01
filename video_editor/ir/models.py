@@ -9,11 +9,14 @@ from pydantic import BaseModel, Field, ConfigDict, model_validator
 from video_editor.ir.enums import (
     AspectRatio,
     AssetType,
-    EffectType,
+    EffectType as EnumEffectType,
     TextAlignment,
     TrackType,
-    TransitionType,
+    TransitionType as EnumTransitionType,
 )
+from video_editor.ir.animation import AnimationTrack
+from video_editor.ir.effects import Effect as DomainEffect, EffectType
+from video_editor.ir.transitions import Transition as DomainTransition, TransitionType, TransitionCategory
 
 
 def generate_uuid() -> str:
@@ -95,25 +98,8 @@ class TextStyle(BaseModel):
     )
 
 
-class Effect(BaseModel):
-    """Extensible effect specification."""
-
-    model_config = ConfigDict(extra="ignore")
-
-    id: str = Field(default_factory=generate_uuid, description="Effect UUID")
-    type: EffectType = Field(..., description="Effect type enum")
-    params: Dict[str, Any] = Field(
-        default_factory=dict, description="Effect parameters"
-    )
-
-
-class Transition(BaseModel):
-    """Transition specification between clips."""
-
-    model_config = ConfigDict(extra="ignore")
-
-    type: TransitionType = Field(..., description="Transition effect type")
-    duration_us: int = Field(..., ge=0, description="Transition duration in us")
+Effect = DomainEffect
+Transition = DomainTransition
 
 
 class Clip(BaseModel):
@@ -146,8 +132,11 @@ class Clip(BaseModel):
         default=None, description="TextStyle if text/subtitle clip"
     )
     effects: List[Effect] = Field(default_factory=list)
+    transition_in: Optional[Transition] = Field(default=None)
+    transition_out: Optional[Transition] = Field(default=None)
     in_transition: Optional[Transition] = Field(default=None)
     out_transition: Optional[Transition] = Field(default=None)
+    animation_tracks: List[AnimationTrack] = Field(default_factory=list)
 
     @property
     def timeline_end_us(self) -> int:

@@ -99,6 +99,10 @@ class TimelineCompiler:
                     volume=clip.audio.volume if not clip.audio.muted else 0.0,
                     transform=clip.transform.model_copy(deep=True),
                     text_style=clip.text.model_copy(deep=True) if clip.text else None,
+                    animation_tracks=[t.model_copy(deep=True) for t in getattr(clip, "animation_tracks", [])],
+                    transition_in=clip.transition_in.model_copy(deep=True) if getattr(clip, "transition_in", None) else None,
+                    transition_out=clip.transition_out.model_copy(deep=True) if getattr(clip, "transition_out", None) else None,
+                    effects=[e.model_copy(deep=True) for e in getattr(clip, "effects", [])],
                 )
                 track_items.append(segment)
                 cursor_time_us = segment.timeline_end_us

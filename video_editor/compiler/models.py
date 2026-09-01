@@ -5,6 +5,9 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field, ConfigDict
 from video_editor.ir.enums import TrackType
 from video_editor.ir.models import Transform, TextStyle
+from video_editor.ir.animation import AnimationTrack
+from video_editor.ir.transitions import Transition
+from video_editor.ir.effects import Effect
 
 
 def generate_uuid() -> str:
@@ -37,6 +40,10 @@ class RenderSegment(BaseModel):
     volume: float = Field(default=1.0, ge=0.0, le=2.0, description="Audio volume multiplier")
     transform: Transform = Field(default_factory=Transform, description="Static spatial transform")
     text_style: Optional[TextStyle] = Field(default=None, description="TextStyle for text/subtitle clips")
+    animation_tracks: List[AnimationTrack] = Field(default_factory=list, description="Keyframe animation tracks")
+    transition_in: Optional[Transition] = Field(default=None, description="Inbound clip transition")
+    transition_out: Optional[Transition] = Field(default=None, description="Outbound clip transition")
+    effects: List[Effect] = Field(default_factory=list, description="Visual/audio effect chain")
 
     @property
     def timeline_end_us(self) -> int:

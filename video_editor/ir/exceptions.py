@@ -70,3 +70,21 @@ class HistoryError(VideoEditorError):
     """Raised when undo/redo stack limits or operations fail."""
 
     pass
+
+
+class InvalidKeyframeError(VideoEditorError):
+    """Raised when keyframe or animation model validation fails."""
+
+    pass
+
+
+class InvalidTransitionError(VideoEditorError):
+    """Raised when transition model validation fails."""
+
+    pass
+
+
+class InvalidEffectError(VideoEditorError):
+    """Raised when effect model validation fails."""
+
+    pass
