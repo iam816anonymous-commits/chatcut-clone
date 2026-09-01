@@ -58,9 +58,13 @@ class StateManager:
         """Perform redo state transition."""
         return self._history.redo()
 
-    def register_asset(self, asset: Asset) -> None:
-        """Register a source media asset in project inventory."""
-        self._history._current_state.assets[asset.id] = asset
+    def register_asset(self, asset: Asset) -> VideoProject:
+        """Register a source media asset transactionally."""
+        candidate_project = self._history.current_state.model_copy(deep=True)
+        candidate_project.assets[asset.id] = asset.model_copy(deep=True)
+        validate_project_integrity(candidate_project)
+        self._history.record_state_change(candidate_project)
+        return self.project
 
     def apply_operation(self, operation: Operation) -> VideoProject:
         """Apply an atomic operation in a transactional copy-on-write sandbox."""

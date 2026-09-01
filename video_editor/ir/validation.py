@@ -14,6 +14,9 @@ from video_editor.ir.exceptions import (
 )
 from video_editor.ir.models import Clip, Track, VideoProject
 
+# Canonical Version Policy Boundary
+SUPPORTED_MAJOR_VERSIONS = {"1"}
+
 
 def validate_clip_time_bounds(clip: Clip, asset_duration_us: int | None = None) -> None:
     """Validate clip timing parameters."""
@@ -82,6 +85,14 @@ def validate_track_clip_compatibility(track: Track, clip: Clip) -> None:
 
 def validate_project_integrity(project: VideoProject) -> None:
     """Run comprehensive business logic and structural integrity validation."""
+    # Validate Schema Version Boundary
+    major_ver = project.version.split(".")[0]
+    if major_ver not in SUPPORTED_MAJOR_VERSIONS:
+        raise ProjectIntegrityError(
+            f"Unsupported IR version '{project.version}'. Major version '{major_ver}' is not supported.",
+            {"version": project.version},
+        )
+
     track_ids = set()
     clip_ids = set()
 
@@ -113,6 +124,7 @@ def validate_project_integrity(project: VideoProject) -> None:
             validate_clip_time_bounds(clip, asset_duration)
             validate_track_clip_compatibility(track, clip)
 
-        # Disallow overlaps on VIDEO and TEXT tracks
-        if track.type in (TrackType.VIDEO, TrackType.TEXT, TrackType.SUBTITLE):
+        # Explicit Overlap Policy: Single-layer visual tracks (VIDEO) disallow overlaps.
+        # Audio tracks (AUDIO) and text/subtitle overlay tracks explicitly ALLOW overlaps for mixing and compositing.
+        if track.type == TrackType.VIDEO:
             check_clip_overlaps(track.clips)

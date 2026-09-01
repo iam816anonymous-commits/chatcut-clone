@@ -32,7 +32,9 @@ class HistoryManager:
     def history_log(self) -> List[Operation]:
         return list(self._operations)
 
-    def record_state_change(self, new_state: VideoProject, operation: Operation) -> None:
+    def record_state_change(
+        self, new_state: VideoProject, operation: Optional[Operation] = None
+    ) -> None:
         """Commit a new project state and operation to history, clearing the redo stack."""
         self._past_states.append(self._current_state)
         if len(self._past_states) > self._max_history:
@@ -40,12 +42,13 @@ class HistoryManager:
 
         self._current_state = new_state.model_copy(deep=True)
         self._future_states.clear()  # Clear redo branch on new edit
-        self._operations.append(operation)
+        if operation is not None:
+            self._operations.append(operation)
 
     def undo(self) -> VideoProject:
         """Revert to previous project state."""
         if not self.can_undo:
-            raise HistoryError("No states available to undo")
+            raise HistoryError("Cannot undo: History stack is at initial state")
 
         self._future_states.append(self._current_state)
         self._current_state = self._past_states.pop()
@@ -54,7 +57,7 @@ class HistoryManager:
     def redo(self) -> VideoProject:
         """Advance to next project state in redo stack."""
         if not self.can_redo:
-            raise HistoryError("No states available to redo")
+            raise HistoryError("Cannot redo: Redo stack is empty")
 
         self._past_states.append(self._current_state)
         self._current_state = self._future_states.pop()
