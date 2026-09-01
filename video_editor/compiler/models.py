@@ -4,6 +4,7 @@ import uuid
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field, ConfigDict
 from video_editor.ir.enums import TrackType
+from video_editor.ir.models import Transform, TextStyle
 
 
 def generate_uuid() -> str:
@@ -26,14 +27,16 @@ class RenderSegment(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     clip_id: str = Field(..., description="Referenced IR Clip ID")
-    asset_id: str = Field(..., description="Referenced IR Asset ID")
-    input_index: int = Field(..., ge=0, description="Corresponding RenderInput index")
+    asset_id: str = Field(default="", description="Referenced IR Asset ID")
+    input_index: int = Field(default=0, ge=0, description="Corresponding RenderInput index")
     timeline_start_us: int = Field(..., ge=0, description="Timeline position in microseconds")
     timeline_duration_us: int = Field(..., gt=0, description="Timeline duration in microseconds")
-    source_start_us: int = Field(..., ge=0, description="Source trim start in microseconds")
-    source_duration_us: int = Field(..., gt=0, description="Source trim duration in microseconds")
+    source_start_us: int = Field(default=0, ge=0, description="Source trim start in microseconds")
+    source_duration_us: int = Field(default=1_000_000, gt=0, description="Source trim duration in microseconds")
     speed: float = Field(default=1.0, gt=0.1, le=10.0, description="Playback speed multiplier")
     volume: float = Field(default=1.0, ge=0.0, le=2.0, description="Audio volume multiplier")
+    transform: Transform = Field(default_factory=Transform, description="Static spatial transform")
+    text_style: Optional[TextStyle] = Field(default=None, description="TextStyle for text/subtitle clips")
 
     @property
     def timeline_end_us(self) -> int:
@@ -93,12 +96,13 @@ class RenderPlan(BaseModel):
     tracks: List[RenderTrack] = Field(default_factory=list)
 
     @property
-    def primary_video_track(self) -> Optional[RenderTrack]:
-        for track in self.tracks:
-            if track.track_type == TrackType.VIDEO:
-                return track
-        return None
+    def video_tracks(self) -> List[RenderTrack]:
+        return [t for t in self.tracks if t.track_type == TrackType.VIDEO]
 
     @property
     def audio_tracks(self) -> List[RenderTrack]:
         return [t for t in self.tracks if t.track_type == TrackType.AUDIO]
+
+    @property
+    def text_tracks(self) -> List[RenderTrack]:
+        return [t for t in self.tracks if t.track_type in (TrackType.TEXT, TrackType.SUBTITLE)]

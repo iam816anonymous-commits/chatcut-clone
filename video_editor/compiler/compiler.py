@@ -97,6 +97,8 @@ class TimelineCompiler:
                     source_duration_us=clip.source_duration_us,
                     speed=clip.speed,
                     volume=clip.audio.volume if not clip.audio.muted else 0.0,
+                    transform=clip.transform.model_copy(deep=True),
+                    text_style=clip.text.model_copy(deep=True) if clip.text else None,
                 )
                 track_items.append(segment)
                 cursor_time_us = segment.timeline_end_us
