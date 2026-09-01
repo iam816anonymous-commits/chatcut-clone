@@ -1,8 +1,10 @@
-"""FFmpeg Renderer Foundation Primitives."""
+"""FFmpeg Renderer Foundation Primitives and RenderPlan execution."""
 
 import os
 from typing import Callable, Optional
 
+from video_editor.compiler.models import RenderPlan
+from video_editor.compiler.planner import RenderPlanner
 from video_editor.ir.models import VideoProject
 from video_editor.media.exceptions import InputFileNotFoundError
 from video_editor.rendering.base import BaseRenderer
@@ -60,11 +62,12 @@ def verify_rendered_output(output_path: str) -> None:
 
 
 class FFmpegRenderer(BaseRenderer):
-    """FFmpeg rendering engine implementing deterministic media processing primitives."""
+    """FFmpeg rendering engine implementing deterministic media processing primitives and RenderPlan execution."""
 
-    def __init__(self, ffmpeg_path: str = "ffmpeg", timeout: float = 60.0) -> None:
+    def __init__(self, ffmpeg_path: str = "ffmpeg", timeout: float = 120.0) -> None:
         self.ffmpeg_path = ffmpeg_path
         self.executor = ProcessExecutor(default_timeout=timeout)
+        self.planner = RenderPlanner()
 
     def render(
         self,
@@ -72,8 +75,27 @@ class FFmpegRenderer(BaseRenderer):
         output_path: str,
         progress_callback: Optional[Callable[[float], None]] = None,
     ) -> ProcessResult:
-        """Proof-of-concept renderer boundary placeholder for full projects."""
-        raise NotImplementedError("Full timeline IR filtergraph rendering is scheduled for Phase 2B.")
+        """Proof-of-concept renderer boundary placeholder. Use render_plan() for compiled projects."""
+        raise NotImplementedError("Direct IR rendering is deprecated. Compile project to RenderPlan and call render_plan().")
+
+    def render_plan(self, plan: RenderPlan, output_path: str) -> ProcessResult:
+        """Execute a compiled RenderPlan to produce a rendered media file."""
+        abs_output = os.path.abspath(os.path.realpath(output_path))
+        out_dir = os.path.dirname(abs_output)
+        if out_dir and not os.path.exists(out_dir):
+            os.makedirs(out_dir, exist_ok=True)
+
+        cmd = self.planner.plan_to_command(plan, abs_output, ffmpeg_path=self.ffmpeg_path)
+        res = self.executor.execute(cmd)
+
+        if not res.success:
+            raise RenderExecutionError(
+                f"RenderPlan execution failed: {res.stderr.strip()}",
+                {"command": res.command, "stderr": res.stderr, "exit_code": res.exit_code},
+            )
+
+        verify_rendered_output(abs_output)
+        return res
 
     def render_transcode(
         self, input_path: str, output_path: str, video_codec: str = "libx264", audio_codec: str = "aac"
