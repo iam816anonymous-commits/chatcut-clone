@@ -67,8 +67,8 @@ class VideoCompositor:
 
                     # PTS Reset & Speed Factor
                     pts_label = allocator.allocate_video("v_pts")
-                    speed_filter_spec = compile_video_speed_filter(item.speed)
-                    pts_param = f"PTS-STARTPTS+{speed_filter_spec.split('=', 1)[1]}" if "setpts=" in speed_filter_spec else "PTS-STARTPTS"
+                    pts_factor = 1.0 / item.speed if item.speed > 0 else 1.0
+                    pts_param = f"(PTS-STARTPTS)*{pts_factor:.6f}" if item.speed != 1.0 else "PTS-STARTPTS"
                     graph.add_node(
                         inputs=[t_label],
                         filter_name="setpts",

@@ -24,7 +24,7 @@ def validate_project_renderability(project: VideoProject) -> None:
             {"project_id": project.id},
         )
 
-    # Validate speed multipliers on all clips
+    # Validate Phase 2D Clip Properties (speed, transitions, keyframes, effects)
     for track in project.tracks:
         for clip in track.clips:
             if hasattr(clip, "speed") and clip.speed <= 0.0:
@@ -32,3 +32,18 @@ def validate_project_renderability(project: VideoProject) -> None:
                     f"Clip '{clip.id}' has invalid speed multiplier {clip.speed}",
                     {"clip_id": clip.id, "speed": clip.speed},
                 )
+
+            # Transition duration check
+            for trans_attr in ("transition_in", "transition_out", "in_transition", "out_transition"):
+                trans = getattr(clip, trans_attr, None)
+                if trans is not None:
+                    if trans.duration_us <= 0:
+                        raise UnrenderableProjectError(
+                            f"Clip '{clip.id}' has transition duration <= 0: {trans.duration_us}us",
+                            {"clip_id": clip.id, "duration_us": trans.duration_us},
+                        )
+                    if trans.duration_us > clip.timeline_duration_us:
+                        raise UnrenderableProjectError(
+                            f"Clip '{clip.id}' transition duration {trans.duration_us}us exceeds clip duration {clip.timeline_duration_us}us",
+                            {"clip_id": clip.id, "trans_duration": trans.duration_us, "clip_duration": clip.timeline_duration_us},
+                        )

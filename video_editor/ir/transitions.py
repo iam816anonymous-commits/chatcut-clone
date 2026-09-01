@@ -11,13 +11,30 @@ def generate_uuid() -> str:
     return str(uuid.uuid4())
 
 
+class TransitionCategory(str, Enum):
+    """Transition effect category classification."""
+
+    FADE = "FADE"
+    DISSOLVE = "DISSOLVE"
+    WIPE = "WIPE"
+    SLIDE = "SLIDE"
+
+
 class TransitionType(str, Enum):
     """Supported video and audio transition effect types."""
 
+    CROSSFADE = "CROSSFADE"
     CUT = "CUT"
     FADE = "FADE"
-    DISSOLVE = "DISSOLVE"
+    FADE_BLACK = "FADE_BLACK"
+    FADE_WHITE = "FADE_WHITE"
     WIPE_LEFT = "WIPE_LEFT"
+    WIPE_RIGHT = "WIPE_RIGHT"
+    WIPE_UP = "WIPE_UP"
+    WIPE_DOWN = "WIPE_DOWN"
+    SLIDE_LEFT = "SLIDE_LEFT"
+    SLIDE_RIGHT = "SLIDE_RIGHT"
+    DISSOLVE = "DISSOLVE"
 
 
 class Transition(BaseModel):
